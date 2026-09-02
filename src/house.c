@@ -263,8 +263,15 @@ uint8_t rulesPass(void)
  */
 uint8_t countRoomsWith(uint8_t bit)
 {
-    (void)bit;      /* delete this line */
-    return 0U;      /* TODO */
+    uint8_t count = 0U;
+
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
+        if (READ_BIT(house[i].status, bit)) {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 
