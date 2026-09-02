@@ -374,9 +374,6 @@ void houseReport(void)
     printf("  Average: %u C\n", average);
 
     pauseKey();
-
-
-    printf("  TODO houseReport\n");
 }
 
 
@@ -415,5 +412,45 @@ void houseReport(void)
  */
 void runAutomation(void)
 {
-    printf("  TODO runAutomation\n");
+     char trace[ROOM_COUNT][96];
+    uint8_t changed = 0U;
+
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
+
+        Room_t *r = houseRoom(i);
+        uint8_t before = r->status;
+
+        if (!READ_BIT(r->status, BIT_AUTO)) {
+
+            snprintf(trace[i], sizeof(trace[i]),
+                     "%s  %u C   skipped (MANUAL)",
+                     r->name,
+                     tempC(r->adc));
+
+        } else {
+
+            uint8_t result = applyRules(r);
+            changed += result;
+
+            snprintf(trace[i], sizeof(trace[i]),
+                     "%s  %u C   ",
+                     r->name,
+                     tempC(r->adc));
+
+            snprintf(trace[i] + strlen(trace[i]),
+                     sizeof(trace[i]) - strlen(trace[i]),
+                     "0b%08b -> 0b%08b%s",
+                     before,
+                     r->status,
+                     result ? "  *" : "");  
+        }
+    }
+
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
+        printf("  %s\n", trace[i]);
+    }
+
+    printf("\n  %u room(s) changed.\n", changed);
+
+    pauseKey();
 }
