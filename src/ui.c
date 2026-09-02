@@ -411,8 +411,7 @@ void houseReport(void)
  * [ 3 / 6 ] and find the `if` that has no `else`.
  */
 void runAutomation(void)
-{
-     char trace[ROOM_COUNT][96];
+{ char trace[ROOM_COUNT][96];
     uint8_t changed = 0U;
 
     for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
@@ -433,18 +432,44 @@ void runAutomation(void)
             changed += result;
 
             snprintf(trace[i], sizeof(trace[i]),
-                     "%s  %u C   ",
+                     "%s  %u C   0b",
                      r->name,
                      tempC(r->adc));
 
-            snprintf(trace[i] + strlen(trace[i]),
-                     sizeof(trace[i]) - strlen(trace[i]),
-                     "0b%08b -> 0b%08b%s",
-                     before,
-                     r->status,
-                     result ? "  *" : "");  
+            for (int8_t bit = 7; bit >= 0; bit--) {
+                size_t len = strlen(trace[i]);
+
+                snprintf(trace[i] + len,
+                         sizeof(trace[i]) - len,
+                         "%u",
+                         READ_BIT(before, bit));
+            }
+
+            size_t len = strlen(trace[i]);
+
+            snprintf(trace[i] + len,
+                     sizeof(trace[i]) - len,
+                     " -> 0b");
+
+            for (int8_t bit = 7; bit >= 0; bit--) {
+                len = strlen(trace[i]);
+
+                snprintf(trace[i] + len,
+                         sizeof(trace[i]) - len,
+                         "%u",
+                         READ_BIT(r->status, bit));
+            }
+
+            if (result) {
+                len = strlen(trace[i]);
+
+                snprintf(trace[i] + len,
+                         sizeof(trace[i]) - len, "  *");
+            }
         }
     }
+
+    render(-1);
 
     for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
         printf("  %s\n", trace[i]);
