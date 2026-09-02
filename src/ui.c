@@ -191,7 +191,26 @@ void setOccupancy(void)
  */
 void setTemperature(void)
 {
-    printf("  TODO setTemperature\n");
+    uint8_t i = pickRoom();
+
+    if (i == 255U) {
+        return;
+    }
+    int adc;
+    printf("  Raw ADC reading (0..1023): ");
+    if (!readInt(&adc)) {
+        statusSet(C_ALARM, "%s: invalid ADC reading", houseRoom(i)->name);
+        return;
+    }
+
+    if (adc < 0 || adc > ADC_MAX) {
+        statusSet(C_ALARM, "%s: invalid ADC reading", houseRoom(i)->name);
+        return;
+    }
+    houseRoom(i)->adc = (uint16_t)adc;
+    statusSet(C_OK, "%s: ADC %u -> %u C", houseRoom(i)->name, adc, tempC((uint16_t)adc));
+    render((int)i);
+    pauseKey();
 }
 
 
@@ -228,6 +247,42 @@ void setTemperature(void)
  */
 void switchDevice(void)
 {
+    uint8_t i = pickRoom();
+    int choice;
+    if (i == 255U) {
+        return;
+    }
+
+    printf("  Switch (1=Lamp 2=Fan 3=Auto mode): ");
+    if (!readInt(&choice)) {
+        statusSet(C_ALARM, "Nothing switched.");
+        return;
+    }
+
+    switch (choice) {
+        case 1:
+            TOGGLE_BIT(houseRoom(i)->status, BIT_LAMP);
+            CLR_BIT(houseRoom(i)->status, BIT_AUTO);
+            statusSet(C_OK, "%s: Lamp toggled.", houseRoom(i)->name);
+            break;
+        case 2:
+            TOGGLE_BIT(houseRoom(i)->status, BIT_FAN);
+            CLR_BIT(houseRoom(i)->status, BIT_AUTO);
+            statusSet(C_OK, "%s: Fan toggled.", houseRoom(i)->name);
+            break;
+        case 3:
+            TOGGLE_BIT(houseRoom(i)->status, BIT_AUTO);
+            statusSet(C_OK, "%s: Auto mode toggled.", houseRoom(i)->name);
+            break;
+        default:
+            statusSet(C_ALARM, "Nothing switched.");
+            return;
+    }
+    render((int)i);
+    printf("  %s status = ", houseRoom(i)->name);
+    printBinary(houseRoom(i)->status);
+    printf("  (0x%02X)\n", houseRoom(i)->status);
+    pauseKey();
     printf("  TODO switchDevice\n");
 }
 
@@ -262,6 +317,65 @@ void switchDevice(void)
  */
 void houseReport(void)
 {
+    uint8_t lamps;
+    uint8_t fans;
+    uint8_t occupied;
+    uint8_t alarms;
+
+    uint8_t hottest = 0U;
+    uint8_t coldest = 0U;
+
+    uint32_t sum;
+    uint16_t average;
+
+    render(-1);
+
+    lamps = countRoomsWith(BIT_LAMP);
+    printf("  Lamps ON: %u/%u ", lamps, ROOM_COUNT);
+    drawBar(lamps, ROOM_COUNT, REPORT_BAR_W, C_LAMP);
+    printf("\n");
+
+    fans = countRoomsWith(BIT_FAN);
+    printf("  Fans ON: %u/%u ", fans, ROOM_COUNT);
+    drawBar(fans, ROOM_COUNT, REPORT_BAR_W, C_FAN);
+    printf("\n");
+
+    occupied = countRoomsWith(BIT_OCCUPIED);
+    printf("  Occupied: %u/%u ", occupied, ROOM_COUNT);
+    drawBar(occupied, ROOM_COUNT, REPORT_BAR_W, C_OK);
+    printf("\n");
+
+    alarms = countRoomsWith(BIT_ALARM);
+    printf("  Alarms: %u/%u ", alarms, ROOM_COUNT);
+    drawBar(alarms, ROOM_COUNT, REPORT_BAR_W, C_ALARM);
+    printf("\n");
+
+    for (uint8_t i = 1U; i < ROOM_COUNT; i++) {
+        if (houseRoom(i)->adc > houseRoom(hottest)->adc) {
+            hottest = i;
+        }
+
+        if (houseRoom(i)->adc < houseRoom(coldest)->adc) {
+            coldest = i;
+        }
+    }
+
+    printf("  Hottest: %s (%u C)\n",
+           houseRoom(hottest)->name,
+           tempC(houseRoom(hottest)->adc));
+
+    printf("  Coldest: %s (%u C)\n",
+           houseRoom(coldest)->name,
+           tempC(houseRoom(coldest)->adc));
+
+    sum = sumAdc(houseRooms(), ROOM_COUNT);
+    average = tempC(sum / ROOM_COUNT);
+
+    printf("  Average: %u C\n", average);
+
+    pauseKey();
+
+
     printf("  TODO houseReport\n");
 }
 
