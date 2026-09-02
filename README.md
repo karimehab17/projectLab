@@ -19,7 +19,7 @@ menu actions that let a person change it.
 | **Date submitted** | 03-09-2026|
 
 Put your name at the top of `src/house.c` and `src/ui.c` too — both files have
-a `Student: <Karim Ehab>` line waiting for it.
+a `Student: <YOUR NAME HERE>` line waiting for it.
 
 ---
 
