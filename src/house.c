@@ -79,9 +79,28 @@ void houseInit(void)
     static const uint8_t  SEED_OCC[ROOM_COUNT] = { 1U, 0U, 0U, 0U, 1U, 0U };
 
     /* TODO: the loop described above. */
-    (void)NAMES; (void)SEED_ADC; (void)SEED_OCC;   /* delete these */
-}
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
 
+    uint8_t j = 0U;
+
+    while (NAMES[i][j] != '\0' && j < NAME_LEN - 1U) {
+        house[i].name[j] = NAMES[i][j];
+        j++;
+    }
+
+    house[i].name[j] = '\0';
+
+    house[i].adc = SEED_ADC[i];
+
+    house[i].status = 0U;
+
+    SET_BIT(house[i].status, BIT_AUTO);
+
+    if (SEED_OCC[i]) {
+        SET_BIT(house[i].status, BIT_OCCUPIED);
+     }
+    }
+}
 
 /* ==========================================================================
  *  [ 2 / 6 ]   YOUR WORK HERE  —  tempC()                            FR-05
@@ -109,8 +128,12 @@ void houseInit(void)
  */
 uint16_t tempC(uint16_t adc)
 {
-    (void)adc;      /* delete this line */
-    return 0U;      /* TODO */
+    uint32_t result;
+
+    result = ((uint32_t)adc * 500U)/1024  ;
+     
+
+     return (uint16_t)result;
 }
 
 
@@ -153,9 +176,46 @@ uint16_t tempC(uint16_t adc)
  */
 uint8_t applyRules(Room_t *r)
 {
-    (void)r;        /* delete this line */
-    return 0U;      /* TODO */
+    uint8_t oldStatus;
+    uint16_t temperature;
+
+    if (!READ_BIT(r->status, BIT_AUTO)) {
+        return 0U;
+    }
+
+    oldStatus = r->status;
+
+    temperature = tempC(r->adc);
+
+    if (READ_BIT(r->status, BIT_OCCUPIED)) {
+        SET_BIT(r->status, BIT_LAMP);
+    }
+    else {
+        CLR_BIT(r->status, BIT_LAMP);
+    }
+
+    if (temperature >= TEMP_HOT) {
+        SET_BIT(r->status, BIT_FAN);
+    }
+    else {
+        CLR_BIT(r->status, BIT_FAN);
+    }
+
+    if (temperature >= TEMP_ALARM) {
+        SET_BIT(r->status, BIT_ALARM);
+        SET_BIT(r->status, BIT_LAMP);
+    }
+    else {
+        CLR_BIT(r->status, BIT_ALARM);
+    }
+
+    if (r->status != oldStatus) {
+        return 1U;
+    }
+
+    return 0U;
 }
+
 
 
 /* ==========================================================================
@@ -179,7 +239,13 @@ uint8_t applyRules(Room_t *r)
  */
 uint8_t rulesPass(void)
 {
-    return 0U;      /* TODO */
+    uint8_t changed = 0U;
+
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
+        changed += applyRules(&house[i]);
+    }
+
+    return changed;
 }
 
 
